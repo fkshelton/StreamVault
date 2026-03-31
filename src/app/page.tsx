@@ -1,66 +1,81 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { getTrending, getPopularMovies, getPopularTV, getNowPlaying } from "@/lib/tmdb";
+import HeroCarousel from "@/components/HeroCarousel";
+import MediaCard from "@/components/MediaCard";
+import type { Metadata } from "next";
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: "StreamVault — Find Where to Watch Movies & TV Shows",
+};
+
+export default async function HomePage() {
+  const [trending, popularMovies, popularTV, nowPlaying] = await Promise.all([
+    getTrending("all", "week"),
+    getPopularMovies(),
+    getPopularTV(),
+    getNowPlaying(),
+  ]);
+  // Filter trending to English-only (TMDB trending is global, no region param)
+  const trendingEN = {
+    ...trending,
+    results: trending.results.filter((m) => m.original_language === "en"),
+  };
+
+  const heroItems = trendingEN.results
+    .filter((m) => m.backdrop_path && m.overview)
+    .slice(0, 8);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <>
+      <HeroCarousel items={heroItems} />
+
+      <div style={{ background: "linear-gradient(to bottom, rgba(9,9,15,0) 0%, var(--bg-primary) 100%)", height: 80, marginTop: -80, position: "relative", zIndex: 1 }} />
+
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {/* Trending */}
+        <section className="page-section" style={{ paddingBottom: 0 }}>
+          <h2 className="section-title">Trending This Week</h2>
+          <div className="media-row">
+            {trendingEN.results.slice(0, 16).map((item) => (
+              <MediaCard
+                key={`${item.id}-${item.media_type}`}
+                media={item}
+                type={(item.media_type as "movie" | "tv") || "movie"}
+                showType
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Now Playing */}
+        <section className="page-section" style={{ paddingBottom: 0 }}>
+          <h2 className="section-title">Now Playing in Theaters</h2>
+          <div className="media-row">
+            {nowPlaying.results.slice(0, 16).map((item) => (
+              <MediaCard key={item.id} media={item} type="movie" />
+            ))}
+          </div>
+        </section>
+
+        {/* Popular Movies */}
+        <section className="page-section" style={{ paddingBottom: 0 }}>
+          <h2 className="section-title">Popular Movies</h2>
+          <div className="media-row">
+            {popularMovies.results.slice(0, 16).map((item) => (
+              <MediaCard key={item.id} media={item} type="movie" />
+            ))}
+          </div>
+        </section>
+
+        {/* Popular TV */}
+        <section className="page-section">
+          <h2 className="section-title">Popular TV Shows</h2>
+          <div className="media-row">
+            {popularTV.results.slice(0, 16).map((item) => (
+              <MediaCard key={item.id} media={item} type="tv" />
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
